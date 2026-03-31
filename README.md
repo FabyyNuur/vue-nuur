@@ -53,13 +53,13 @@ npm run dev
 - **Styling** : TailwindCSS, Lucide Vue (Icônes).
 - **State Management** : Pinia.
 - **Routing** : Vue Router.
-- **API** : Axios (connecté à [back-node](../back-node/)).
+- **API** : Axios (connecté à [back-node](https://github.com/FabyyNuur/back-node)).
 
 ---
 
 ## Intégration Backend
 
-Ce frontend communique avec l'API située dans le dossier `../back-node/`. Assurez-vous que le backend est opérationnel pour que les données s'affichent correctement.
+Ce frontend communique avec l'API située dans le dépôt [back-node](https://github.com/FabyyNuur/back-node). Assurez-vous que le backend est opérationnel pour que les données s'affichent correctement.
 
 ---
 
