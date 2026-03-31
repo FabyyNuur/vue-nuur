@@ -15,9 +15,9 @@ Implémentation du frontend pour le système de gestion de salle de sport **Nuur
 
 ---
 
-## 📸 Aperçu
+##  Aperçu
 
-| 🔐 Connexion | 📊 Tableau de Bord |
+|  Connexion |  Tableau de Bord |
 | :---: | :---: |
 | ![Login](src/assets/login.png) | ![Dashboard](src/assets/dashboard.png) |
 
