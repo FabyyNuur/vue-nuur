@@ -188,7 +188,7 @@
 
     <div v-if="isSubscriptionModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6">
       <div class="fixed inset-0 bg-black/70" @click="isSubscriptionModalOpen = false"></div>
-      <div class="z-50 bg-background rounded-3xl shadow-lg border w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="z-50 bg-background rounded-3xl shadow-lg border w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b flex items-start justify-between gap-4">
           <div>
             <h2 class="text-[42px] leading-10 font-bold text-[#2F413D]">Nouvel Abonnement</h2>
@@ -284,6 +284,19 @@
             </div>
           </div>
 
+          <div class="space-y-2 pt-2 border-t border-[#D7E0DD]">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-semibold text-[#31423E]">Promo / Réduction (%)</label>
+              <span v-if="subscriptionForm.discount_percent > 0" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                -{{ subscriptionForm.discount_percent }}% appliqué
+              </span>
+            </div>
+            <div class="relative">
+              <input v-model.number="subscriptionForm.discount_percent" type="number" min="0" max="100" class="h-11 w-full rounded-xl border border-input bg-input-background px-3 pr-10 focus:ring-1 focus:ring-[#3E524D]" placeholder="0" />
+              <span class="absolute right-3 top-[10px] text-muted-foreground font-bold">%</span>
+            </div>
+          </div>
+
           <div class="rounded-2xl bg-[#EFF2F1] p-4 space-y-3">
             <label class="flex items-center gap-3 text-base font-medium text-[#31423E]">
               <input v-model="subscriptionForm.only_registration_today" type="checkbox" class="accent-[#3E524D] h-5 w-5" />
@@ -312,6 +325,10 @@
             <div class="flex justify-between">
               <span class="text-muted-foreground">Frais d'inscription:</span>
               <span class="font-semibold">{{ formatNumber(registrationFeeDue) }} FCFA</span>
+            </div>
+            <div v-if="subscriptionForm.discount_percent > 0" class="flex justify-between text-emerald-600">
+              <span>Réduction ({{ subscriptionForm.discount_percent }}%):</span>
+              <span class="font-bold">-{{ formatNumber((subscriptionForm.only_registration_today ? registrationFeeDue : (selectedSubscriptionPrice + (subscriptionForm.include_registration_fee && !subscriptionForm.waive_registration_fee ? registrationFeeDue : 0))) - totalDue) }} FCFA</span>
             </div>
             <div class="flex justify-between pt-2 border-t text-base">
               <span class="font-bold">Total à encaisser:</span>

@@ -15,6 +15,7 @@ export function useClientsLogic() {
   const isHistoryOpen = ref(false);
   const currentHistory = ref<any[]>([]);
   const loadingHistory = ref(false);
+  const originalActivityIds = ref<number[]>([]); // Activités déjà souscrites
 
   const formData = ref({
     first_name: '',
@@ -26,6 +27,7 @@ export function useClientsLogic() {
     selected_activity_ids: [] as number[],
     duration_months: '1',
     payment_method: 'CASH',
+    discount_percent: 0,
   });
 
   const editForm = ref({
@@ -38,6 +40,7 @@ export function useClientsLogic() {
     selected_activity_ids: [] as number[],
     duration_months: '1',
     payment_method: 'CASH',
+    discount_percent: 0,
   });
 
   const formatNumberLocal = (num: number) => {
@@ -77,7 +80,9 @@ export function useClientsLogic() {
   });
 
   const formTotalDue = computed(() => {
-    return calculatedRegFee.value + calculatedSubFee.value;
+    const raw = calculatedRegFee.value + calculatedSubFee.value;
+    const discount = Math.min(Math.max(formData.value.discount_percent || 0, 0), 100);
+    return Math.round(raw * (1 - discount / 100));
   });
 
   const formExpirationDate = computed(() => {
@@ -88,8 +93,12 @@ export function useClientsLogic() {
   });
 
   const editRegFee = computed(() => {
-    if (editForm.value.subscription_mode === 'pack') return 15000;
-    return editForm.value.selected_activity_ids.reduce((sum, id) => {
+    // Pas de frais d'inscription au renouvellement
+    if (editForm.value.subscription_mode === 'pack') return 0;
+    const newIds = editForm.value.selected_activity_ids.filter(
+      (id) => !originalActivityIds.value.includes(id)
+    );
+    return newIds.reduce((sum, id) => {
       const act = activities.value.find(a => a.id === id);
       return sum + (act?.registration_fee || 0);
     }, 0);
@@ -97,8 +106,12 @@ export function useClientsLogic() {
 
   const editSubFee = computed(() => {
     const months = Number(editForm.value.duration_months);
+    // Seulement les NOUVELLES activités
+    const newIds = editForm.value.selected_activity_ids.filter(
+      (id) => !originalActivityIds.value.includes(id)
+    );
     if (editForm.value.subscription_mode === 'pack') return 30000 * months;
-    return editForm.value.selected_activity_ids.reduce((sum, id) => {
+    return newIds.reduce((sum, id) => {
       const act = activities.value.find(a => a.id === id);
       let price = act?.monthly_price || 0;
       if (months >= 12 && act?.yearly_price) price = act.yearly_price / 12;
@@ -108,7 +121,11 @@ export function useClientsLogic() {
     }, 0);
   });
 
-  const editTotalDue = computed(() => editRegFee.value + editSubFee.value);
+  const editTotalDue = computed(() => {
+    const raw = editRegFee.value + editSubFee.value;
+    const discount = Math.min(Math.max(editForm.value.discount_percent || 0, 0), 100);
+    return Math.round(raw * (1 - discount / 100));
+  });
 
   const editExpirationDate = computed(() => {
     const months = Number(editForm.value.duration_months);
@@ -127,7 +144,8 @@ export function useClientsLogic() {
       subscription_mode: 'pack',
       selected_activity_ids: [],
       duration_months: '1',
-      payment_method: 'CASH'
+      payment_method: 'CASH',
+      discount_percent: 0,
     };
     isModalOpen.value = true;
   };
@@ -145,6 +163,7 @@ export function useClientsLogic() {
     const hasAllActivities = currentIds.length > 0 && currentIds.length >= activities.value.length;
     const isPack = hasPackName || hasAllActivities;
 
+    originalActivityIds.value = isPack ? [] : currentIds;
     editForm.value = {
       first_name: client.first_name,
       last_name: client.last_name,
@@ -155,6 +174,7 @@ export function useClientsLogic() {
       selected_activity_ids: isPack ? [] : currentIds,
       duration_months: '1',
       payment_method: 'CASH',
+      discount_percent: 0,
     };
     saveError.value = '';
     saveSuccess.value = false;
@@ -305,7 +325,7 @@ export function useClientsLogic() {
     clients, activities, isModalOpen, searchQuery, qrClient, detailClient,
     editClient, saving, saveError, saveSuccess, isHistoryOpen, currentHistory, loadingHistory,
     formData, editForm, copied, calculatedRegFee, calculatedSubFee, formTotalDue, formExpirationDate,
-    editRegFee, editSubFee, editTotalDue, editExpirationDate, filteredClients,
+    editRegFee, editSubFee, editTotalDue, editExpirationDate, filteredClients, originalActivityIds,
     formatNumberLocal, copyToClipboard, openModal, selectDetail, openEdit, openHistory,
     isSubscriptionValid, formatDate, sendWhatsapp, handleSubmit, handleSave
   };

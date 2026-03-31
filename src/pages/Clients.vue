@@ -90,7 +90,7 @@
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="text-sm font-medium leading-none">Durée</label>
-                    <select v-model="formData.duration_months" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm mt-2">
+                    <select v-model="formData.duration_months" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <option value="1">1 mois</option>
                       <option value="3">Trimestre (3 mois)</option>
                       <option value="6">Semestre (6 mois)</option>
@@ -99,11 +99,29 @@
                   </div>
                   <div>
                     <label class="text-sm font-medium leading-none">Mode de paiement</label>
-                    <select v-model="formData.payment_method" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm mt-2">
+                    <select v-model="formData.payment_method" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <option value="CASH">Espèces</option>
                       <option value="CARD">Carte</option>
                       <option value="MOBILE_MONEY">Mobile Money</option>
                     </select>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Réduction (%)</label>
+                    <span v-if="formData.discount_percent > 0" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      -{{ formData.discount_percent }}% appliqué
+                    </span>
+                  </div>
+                  <div class="relative">
+                    <input
+                      v-model.number="formData.discount_percent"
+                      type="number" min="0" max="100"
+                      class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 pr-8 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="0"
+                    />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
                 </div>
 
@@ -116,9 +134,13 @@
                     <span class="text-muted-foreground">Abonnement ({{ formData.duration_months }} mois):</span>
                     <span class="font-medium">{{ formatNumberLocal(calculatedSubFee) }} FCFA</span>
                   </div>
+                  <div v-if="formData.discount_percent > 0" class="flex justify-between text-sm text-emerald-600">
+                    <span>Réduction ({{ formData.discount_percent }}%):</span>
+                    <span class="font-medium">-{{ formatNumberLocal((calculatedRegFee + calculatedSubFee) - formTotalDue) }} FCFA</span>
+                  </div>
                   <div class="flex justify-between pt-2 border-t text-lg font-bold text-[#2C3E3A]">
                     <span>Total à payer:</span>
-                    <span>{{ formatNumberLocal(formTotalDue) }} FCFA</span>
+                    <span class="text-[#D9A05B]">{{ formatNumberLocal(formTotalDue) }} FCFA</span>
                   </div>
                   <div class="flex justify-between text-[11px] text-muted-foreground pt-1">
                     <span>Date d'expiration prévue:</span>
@@ -198,7 +220,7 @@
 
     <div v-if="editClient" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="editClient = null"></div>
-      <div class="z-50 bg-background rounded-lg shadow-lg border w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="z-50 bg-background rounded-lg shadow-lg border w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div class="flex items-center justify-between p-6 border-b">
           <div>
             <h2 class="text-lg font-semibold leading-none tracking-tight">Modifier le membre</h2>
@@ -208,7 +230,7 @@
             <X class="w-5 h-5" />
           </button>
         </div>
-        <form @submit.prevent="handleSave" class="p-6 space-y-4">
+        <form @submit.prevent="handleSave" class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-sm font-medium leading-none">Prénom</label>
@@ -254,12 +276,43 @@
                   <p class="text-xs mt-1">Frais: 15 000 FCFA (Inscription) + 30 000 FCFA / mois</p>
                 </div>
 
-                <div v-else class="space-y-2">
-                  <label class="text-sm font-medium">Activités sélectionnées</label>
-                  <div class="grid grid-cols-2 gap-2 mt-2">
-                    <label v-for="a in activities.filter(act => act.name !== 'Pack Complet')" :key="a.id" class="flex items-center gap-2 p-2 rounded border hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" :value="a.id" v-model="editForm.selected_activity_ids" class="accent-[#3E524D]" />
-                      <span class="text-xs">{{ a.name }}</span>
+                <div v-else class="space-y-3">
+                  <!-- Légende -->
+                  <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#3E524D]/40 inline-block"></span> Déjà souscrit</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Nouveau (+)</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label
+                      v-for="a in activities.filter(act => act.name !== 'Pack Complet')"
+                      :key="a.id"
+                      :class="[
+                        'flex items-center gap-2 p-2 rounded border transition-all',
+                        originalActivityIds.includes(a.id)
+                          ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200'
+                          : editForm.selected_activity_ids.includes(a.id)
+                            ? 'bg-emerald-50 border-emerald-400 cursor-pointer'
+                            : 'hover:bg-slate-50 cursor-pointer'
+                      ]"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="a.id"
+                        v-model="editForm.selected_activity_ids"
+                        :disabled="originalActivityIds.includes(a.id)"
+                        class="accent-[#3E524D]"
+                      />
+                      <span
+                        :class="[
+                          'text-xs',
+                          originalActivityIds.includes(a.id) ? 'text-slate-400' :
+                          editForm.selected_activity_ids.includes(a.id) ? 'text-emerald-700 font-bold' : ''
+                        ]"
+                      >
+                        {{ a.name }}
+                        <span v-if="originalActivityIds.includes(a.id)" class="text-[9px] text-slate-400 ml-1">(actif)</span>
+                        <span v-else-if="editForm.selected_activity_ids.includes(a.id)" class="text-emerald-600 ml-1">+</span>
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -284,14 +337,45 @@
                   </div>
                 </div>
 
-                <div class="p-3 rounded-xl border bg-slate-50 flex justify-between items-center">
-                  <div class="text-[11px] text-muted-foreground">
-                    <p>Total estimé (incl. Inscription si modifiée):</p>
-                    <p class="font-bold text-[#D9A05B] text-base">{{ formatNumberLocal(editTotalDue) }} FCFA</p>
+                <!-- Réduction (toujours disponible) -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Promo / Réduction (%)</label>
+                    <span v-if="editForm.discount_percent > 0" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      -{{ editForm.discount_percent }}% appliqué
+                    </span>
                   </div>
-                  <div class="text-right">
-                    <p class="text-[10px] text-muted-foreground leading-tight">Nouvelle fin prévue :</p>
-                    <p class="text-sm font-semibold text-[#2C3E3A] whitespace-nowrap">{{ editExpirationDate }}</p>
+                  <div class="relative">
+                    <input
+                      v-model.number="editForm.discount_percent"
+                      type="number" min="0" max="100"
+                      class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 pr-8 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="0"
+                    />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl border bg-slate-50 space-y-1.5">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-muted-foreground">Inscription:</span>
+                    <span class="font-medium">{{ formatNumberLocal(editRegFee) }} FCFA</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-muted-foreground">Abonnement ({{ editForm.duration_months }}m):</span>
+                    <span class="font-medium">{{ formatNumberLocal(editSubFee) }} FCFA</span>
+                  </div>
+                  <div v-if="editForm.discount_percent > 0" class="flex justify-between text-sm">
+                    <span class="text-emerald-600">Réduction ({{ editForm.discount_percent }}%):</span>
+                    <span class="font-medium text-emerald-600">-{{ formatNumberLocal((editRegFee + editSubFee) - editTotalDue) }} FCFA</span>
+                  </div>
+                  <div class="flex justify-between pt-2 border-t font-bold text-[#2C3E3A]">
+                    <span>Total à encaisser:</span>
+                    <span class="text-[#D9A05B]">{{ formatNumberLocal(editTotalDue) }} FCFA</span>
+                  </div>
+                  <div class="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Expire le:</span>
+                    <span class="font-semibold text-[#2C3E3A]">{{ editExpirationDate }}</span>
                   </div>
                 </div>
             </div>
@@ -595,7 +679,7 @@ const {
   activities, isModalOpen, searchQuery, qrClient, detailClient,
   editClient, saving, saveError, saveSuccess, isHistoryOpen, currentHistory, loadingHistory,
   formData, editForm, copied, calculatedRegFee, calculatedSubFee, formTotalDue, formExpirationDate,
-  editTotalDue, editExpirationDate, filteredClients,
+  editRegFee, editSubFee, editTotalDue, editExpirationDate, filteredClients, originalActivityIds,
   formatNumberLocal, copyToClipboard, openModal, selectDetail, openEdit, openHistory,
   isSubscriptionValid, formatDate, sendWhatsapp, handleSubmit, handleSave
 } = useClientsLogic();

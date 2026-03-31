@@ -65,6 +65,7 @@ export function useActivitiesLogic() {
     only_registration_today: false,
     include_registration_fee: true,
     waive_registration_fee: false,
+    discount_percent: 0,
   });
 
   const formatNumber = (num: number | null | undefined) => Number(num || 0).toLocaleString('fr-FR');
@@ -129,12 +130,15 @@ export function useActivitiesLogic() {
   });
 
   const totalDue = computed(() => {
+    let raw = 0;
     if (subscriptionForm.value.only_registration_today) {
-      return registrationFeeDue.value;
+      raw = registrationFeeDue.value;
+    } else {
+      const includeRegistration = subscriptionForm.value.include_registration_fee && !subscriptionForm.value.waive_registration_fee;
+      raw = selectedSubscriptionPrice.value + (includeRegistration ? registrationFeeDue.value : 0);
     }
-
-    const includeRegistration = subscriptionForm.value.include_registration_fee && !subscriptionForm.value.waive_registration_fee;
-    return selectedSubscriptionPrice.value + (includeRegistration ? registrationFeeDue.value : 0);
+    const discount = Math.min(Math.max(subscriptionForm.value.discount_percent || 0, 0), 100);
+    return Math.round(raw * (1 - discount / 100));
   });
 
   watch(selectedActivity, (activity) => {
@@ -194,6 +198,7 @@ export function useActivitiesLogic() {
       only_registration_today: false,
       include_registration_fee: true,
       waive_registration_fee: false,
+      discount_percent: 0,
     };
   };
 

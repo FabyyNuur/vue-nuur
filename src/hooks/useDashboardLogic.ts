@@ -27,16 +27,21 @@ export function useDashboardLogic() {
       const response = await api.get(`/dashboard?period=${selectedPeriod.value}`);
       stats.value = response.data.stats;
       
-      if (response.data.chartData) {
+      // Mapping du nouveau format: response.data.chart.{ labels, revenues, expenses }
+      if (response.data.chart && response.data.chart.labels?.length > 0) {
+        const labels = response.data.chart.labels;
+        const revenues = response.data.chart.revenues ?? response.data.chart.values ?? [];
+        const expenses = response.data.chart.expenses ?? [];
+
         chartData.value = {
-          labels: response.data.chartData.monthly.labels,
+          labels,
           datasets: [
             {
               fill: true,
-              label: 'Membres',
-              data: response.data.chartData.monthly.members,
-              borderColor: '#3E524D',
-              backgroundColor: 'rgba(62, 82, 77, 0.05)',
+              label: 'Revenus',
+              data: revenues,
+              borderColor: '#D9A05B',
+              backgroundColor: 'rgba(217, 160, 91, 0.15)',
               tension: 0.4,
               pointRadius: 4,
               pointBackgroundColor: '#fff',
@@ -45,10 +50,10 @@ export function useDashboardLogic() {
             },
             {
               fill: true,
-              label: 'Revenus',
-              data: response.data.chartData.monthly.revenues,
-              borderColor: '#D9A05B',
-              backgroundColor: 'rgba(217, 160, 91, 0.1)',
+              label: 'Dépenses',
+              data: expenses,
+              borderColor: '#E87A5B',
+              backgroundColor: 'rgba(232, 122, 91, 0.1)',
               tension: 0.4,
               pointRadius: 4,
               pointBackgroundColor: '#fff',
@@ -57,7 +62,12 @@ export function useDashboardLogic() {
             }
           ]
         };
-        weeklyStats.value = response.data.chartData.weekly;
+
+        // Construire weeklyStats si période = week (pourcentage relatif au max)
+        if (selectedPeriod.value === 'week' && revenues.length === 7) {
+          const maxVal = Math.max(...revenues, 1);
+          weeklyStats.value = revenues.map((v: number) => Math.round((v / maxVal) * 100));
+        }
       }
       
       if (response.data.recentLogs) {
@@ -135,7 +145,10 @@ export function useDashboardLogic() {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(date);
+    const day = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${day} • ${time}`;
   };
 
   return {

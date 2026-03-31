@@ -151,9 +151,9 @@
                 <div>
                   <p class="font-bold text-sm text-[#2C3E3A] leading-tight">{{ log.details || 'Accès Scanné' }}</p>
                   <p class="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Clock class="w-2.5 h-2.5" />
-                    {{ formatDate(log.scanned_at) }}
-                  </p>
+                      <Clock class="w-2.5 h-2.5" />
+                      {{ formatDate(log.scanned_at) }}
+                    </p>
                 </div>
               </div>
               <div>
