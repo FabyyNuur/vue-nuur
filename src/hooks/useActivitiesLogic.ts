@@ -1,18 +1,22 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { isAxiosError } from 'axios';
 import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
+import { isTicketSaleActivityActive } from '../types/ticketing';
 
 export type Activity = {
   id: number;
   name: string;
   registration_fee: number;
   daily_ticket_price: number;
+  weekly_price?: number | null;
   monthly_price: number | null;
   quarterly_price: number | null;
   semester_price: number | null;
   yearly_price: number | null;
   subscription_only: boolean | number;
+  is_active?: boolean | number;
   color?: string | null;
 };
 
@@ -23,6 +27,25 @@ export type Client = {
   email?: string;
   phone?: string;
   subscription_status?: string;
+};
+
+export type DeactivateImpactRow = {
+  subscription_id: number;
+  client_id: number;
+  first_name: string;
+  last_name: string;
+  start_date: string;
+  end_date: string;
+  amount_paid: number;
+  estimated_refund_fcfa: number;
+  note?: string | null;
+};
+
+export type DeactivateImpactData = {
+  affected_subscriptions: DeactivateImpactRow[];
+  total_estimated_refund_fcfa: number;
+  affected_count: number;
+  disclaimer: string;
 };
 
 export function useActivitiesLogic() {
@@ -47,6 +70,7 @@ export function useActivitiesLogic() {
     semester_price: 0,
     yearly_price: 0,
     subscription_only: false,
+    is_active: true,
     color: fallbackColor,
   });
 
@@ -180,6 +204,7 @@ export function useActivitiesLogic() {
       semester_price: 0,
       yearly_price: 0,
       subscription_only: false,
+      is_active: true,
       color: fallbackColor,
     };
   };
@@ -223,6 +248,12 @@ export function useActivitiesLogic() {
   };
 
   const openSubscriptionModal = (activity: Activity) => {
+    if (!isTicketSaleActivityActive(activity)) {
+      alert(
+        "Cette activité est désactivée. Aucun abonnement n'est possible tant qu'elle n'est pas réactivée.",
+      );
+      return;
+    }
     selectedActivityId.value = activity.id;
     resetSubscriptionForm();
     isSubscriptionModalOpen.value = true;
@@ -234,12 +265,20 @@ export function useActivitiesLogic() {
       return;
     }
 
-    const activity = activities.value.find((item) => item.id === subscribeActivityId);
-    if (!activity) {
+    const found = activities.value.find((item) => item.id === subscribeActivityId);
+    if (!found) {
       return;
     }
 
-    openSubscriptionModal(activity);
+    if (!isTicketSaleActivityActive(found)) {
+      alert(
+        "Cette activité est désactivée. Aucun abonnement n'est possible tant qu'elle n'est pas réactivée.",
+      );
+      await router.replace({ path: '/activities', query: {} });
+      return;
+    }
+
+    openSubscriptionModal(found);
     await router.replace({ path: '/activities' });
   };
 
@@ -265,6 +304,7 @@ export function useActivitiesLogic() {
       semester_price: Number(activity.semester_price || 0),
       yearly_price: Number(activity.yearly_price || 0),
       subscription_only: Boolean(activity.subscription_only),
+      is_active: Boolean(activity.is_active ?? true),
       color: activity.color || fallbackColor,
     };
     isActivityModalOpen.value = true;
@@ -280,6 +320,7 @@ export function useActivitiesLogic() {
       quarterly_price: Number(activityForm.value.quarterly_price || 0),
       semester_price: Number(activityForm.value.semester_price || 0),
       yearly_price: Number(activityForm.value.yearly_price || 0),
+      is_active: Boolean(activityForm.value.is_active),
     };
 
     try {
@@ -318,6 +359,95 @@ export function useActivitiesLogic() {
         'Erreur lors de la suppression';
       alert(message);
     }
+  };
+
+  const pendingDeactivateActivity = ref<Activity | null>(null);
+  const deactivateImpact = ref<DeactivateImpactData | null>(null);
+  const impactLoading = ref(false);
+  const impactError = ref<string | null>(null);
+
+  const toggleActivityStatus = async (activity: Activity) => {
+    try {
+      await api.put(`/activities/${activity.id}`, {
+        name: activity.name,
+        registration_fee: Number(activity.registration_fee || 0),
+        daily_ticket_price: Number(activity.daily_ticket_price || 0),
+        weekly_price: Number(activity.weekly_price || 0),
+        monthly_price: Number(activity.monthly_price || 0),
+        quarterly_price: Number(activity.quarterly_price || 0),
+        semester_price: Number(activity.semester_price || 0),
+        yearly_price: Number(activity.yearly_price || 0),
+        subscription_only: Boolean(activity.subscription_only),
+        color: activity.color || fallbackColor,
+        is_active: !Boolean(activity.is_active ?? true),
+      });
+      await fetchActivities();
+    } catch (error) {
+      const err = error as any;
+      alert(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Impossible de changer le statut de l'activité",
+      );
+    }
+  };
+
+  watch(pendingDeactivateActivity, async (activity) => {
+    if (!activity) {
+      deactivateImpact.value = null;
+      impactError.value = null;
+      return;
+    }
+    impactLoading.value = true;
+    impactError.value = null;
+    deactivateImpact.value = null;
+    try {
+      const res = await api.get(`/activities/${activity.id}/deactivate-impact`);
+      deactivateImpact.value = res.data.data as DeactivateImpactData;
+    } catch (error) {
+      let msg = "Impossible de charger l'estimation des remboursements.";
+      if (isAxiosError(error)) {
+        const data = error.response?.data;
+        if (data && typeof data === "object") {
+          if ("message" in data && typeof data.message === "string")
+            msg = data.message;
+          else if ("error" in data && typeof data.error === "string")
+            msg = data.error;
+        } else if (
+          error.code === "ERR_NETWORK" ||
+          error.message === "Network Error"
+        ) {
+          msg =
+            "Serveur injoignable. Vérifiez que l'API tourne (ex. port 4000) et l'URL dans api.ts.";
+        }
+      }
+      impactError.value = msg;
+    } finally {
+      impactLoading.value = false;
+    }
+  });
+
+  const handleToggleStatusClick = async (activity: Activity) => {
+    if (!isTicketSaleActivityActive(activity)) {
+      await toggleActivityStatus(activity);
+      return;
+    }
+    pendingDeactivateActivity.value = activity;
+  };
+
+  const cancelDeactivateActivity = () => {
+    pendingDeactivateActivity.value = null;
+    deactivateImpact.value = null;
+    impactError.value = null;
+  };
+
+  const confirmDeactivateActivity = async () => {
+    const a = pendingDeactivateActivity.value;
+    if (!a) return;
+    pendingDeactivateActivity.value = null;
+    deactivateImpact.value = null;
+    impactError.value = null;
+    await toggleActivityStatus(a);
   };
 
   const goToActivityDetails = (activityId: number) => {
@@ -391,6 +521,14 @@ export function useActivitiesLogic() {
     selectedActivity, selectedClient, subscriptionTypeOptions,
     selectedSubscriptionPrice, registrationFeeDue, totalDue,
     openActivityModal, handleEdit, handleActivitySubmit, handleDelete,
-    openSubscriptionModal, goToActivityDetails, handleSubscriptionSubmit
+    openSubscriptionModal, goToActivityDetails, handleSubscriptionSubmit,
+    toggleActivityStatus,
+    pendingDeactivateActivity,
+    deactivateImpact,
+    impactLoading,
+    impactError,
+    handleToggleStatusClick,
+    cancelDeactivateActivity,
+    confirmDeactivateActivity,
   };
 }

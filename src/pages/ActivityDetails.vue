@@ -15,13 +15,19 @@
         </div>
       </div>
       <button
-        v-if="activity && isCashierOrAdmin"
+        v-if="activity && isCashierOrAdmin && isTicketSaleActivityActive(activity)"
         type="button"
         class="h-10 px-5 rounded-full bg-[#3E524D] text-white hover:bg-[#32423E] font-semibold"
         @click="goToNewSubscription"
       >
         Nouvel abonnement
       </button>
+      <p
+        v-else-if="activity && isCashierOrAdmin && !isTicketSaleActivityActive(activity)"
+        class="text-xs text-amber-700 max-w-xs text-right"
+      >
+        Abonnements indisponibles : cette activité est désactivée.
+      </p>
     </div>
 
     <div v-if="loading" class="rounded-xl border bg-white p-8 text-center text-muted-foreground">
@@ -137,6 +143,7 @@
 
 <script setup lang="ts">
 import { useActivityDetailsLogic } from '../hooks/useActivityDetailsLogic';
+import { isTicketSaleActivityActive } from '../types/ticketing';
 
 const {
   loading, activity, subscriptions, tickets, metrics, isCashierOrAdmin,

@@ -80,7 +80,7 @@
                 <div v-else class="space-y-2">
                   <label class="text-sm font-medium">Sélectionner les activités</label>
                   <div class="grid grid-cols-2 gap-2 mt-2">
-                    <label v-for="a in activities.filter(act => act.name !== 'Pack Complet')" :key="a.id" class="flex items-center gap-2 p-2 rounded border hover:bg-slate-50 cursor-pointer">
+                    <label v-for="a in subscribableActivities.filter(act => act.name !== 'Pack Complet')" :key="a.id" class="flex items-center gap-2 p-2 rounded border hover:bg-slate-50 cursor-pointer">
                       <input type="checkbox" :value="a.id" v-model="formData.selected_activity_ids" class="accent-[#3E524D]" />
                       <span class="text-xs">{{ a.name }}</span>
                     </label>
@@ -284,7 +284,7 @@
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <label
-                      v-for="a in activities.filter(act => act.name !== 'Pack Complet')"
+                      v-for="a in activitiesForEditModal.filter(act => act.name !== 'Pack Complet')"
                       :key="a.id"
                       :class="[
                         'flex items-center gap-2 p-2 rounded border transition-all',
@@ -676,12 +676,43 @@ import {
 import { useClientsLogic } from '../hooks/useClientsLogic';
 
 const {
-  activities, isModalOpen, searchQuery, qrClient, detailClient,
-  editClient, saving, saveError, saveSuccess, isHistoryOpen, currentHistory, loadingHistory,
-  formData, editForm, copied, calculatedRegFee, calculatedSubFee, formTotalDue, formExpirationDate,
-  editRegFee, editSubFee, editTotalDue, editExpirationDate, filteredClients, originalActivityIds,
-  formatNumberLocal, copyToClipboard, openModal, selectDetail, openEdit, openHistory,
-  isSubscriptionValid, formatDate, sendWhatsapp, handleSubmit, handleSave
+  subscribableActivities,
+  activitiesForEditModal,
+  isModalOpen,
+  searchQuery,
+  qrClient,
+  detailClient,
+  editClient,
+  saving,
+  saveError,
+  saveSuccess,
+  isHistoryOpen,
+  currentHistory,
+  loadingHistory,
+  formData,
+  editForm,
+  copied,
+  calculatedRegFee,
+  calculatedSubFee,
+  formTotalDue,
+  formExpirationDate,
+  editRegFee,
+  editSubFee,
+  editTotalDue,
+  editExpirationDate,
+  filteredClients,
+  originalActivityIds,
+  formatNumberLocal,
+  copyToClipboard,
+  openModal,
+  selectDetail,
+  openEdit,
+  openHistory,
+  isSubscriptionValid,
+  formatDate,
+  sendWhatsapp,
+  handleSubmit,
+  handleSave,
 } = useClientsLogic();
 </script>
 

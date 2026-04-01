@@ -75,12 +75,6 @@
             </div>
           </div>
 
-          <div class="flex justify-end mb-8">
-            <a href="#" class="text-[#D9A05B] text-sm hover:text-[#e4b57b] transition-colors font-medium">
-              Mot de passe oublié ?
-            </a>
-          </div>
-
           <button
             type="submit"
             :disabled="loading"
@@ -105,17 +99,13 @@
             class="mt-4 flex flex-col gap-1.5 text-[#EAF1F1]/60 text-xs font-light bg-black/20 p-3.5 rounded-xl border border-white/5 w-full text-left"
           >
             <span class="font-medium text-[#EAF1F1]/80 mb-2 border-b border-white/10 pb-2">Comptes de démonstration :</span>
-            <div class="flex justify-between items-center group">
-               <span>Admin : <span class="text-[#D9A05B] font-mono ml-1">admin@nuurgym.com</span></span>
-               <span class="text-white/40 font-mono">admin123</span>
-            </div>
-            <div class="flex justify-between items-center group">
-               <span>Caissier : <span class="text-[#D9A05B] font-mono ml-1">nuur@nuurgym.com</span></span>
-               <span class="text-white/40 font-mono">nuur123</span>
-            </div>
-            <div class="flex justify-between items-center group">
-               <span>Contrôleur : <span class="text-[#D9A05B] font-mono ml-1">faby@nuurgym.com</span></span>
-               <span class="text-white/40 font-mono">faby123</span>
+            <div
+              v-for="account in LOGIN_TEST_ACCOUNTS"
+              :key="account.email"
+              class="flex justify-between items-center group"
+            >
+              <span>{{ account.role }} : <span class="text-[#D9A05B] font-mono ml-1">{{ account.email }}</span></span>
+              <span class="text-white/40 font-mono">{{ account.password }}</span>
             </div>
           </div>
         </div>
@@ -128,6 +118,7 @@
 import { ref } from 'vue';
 import { Dumbbell, AlertCircle, Eye, EyeOff, Info } from 'lucide-vue-next';
 import { useLoginLogic } from '../hooks/useLoginLogic';
+import { LOGIN_TEST_ACCOUNTS } from '../constants/login';
 
 const { email, password, error, loading, showPassword, handleLogin } = useLoginLogic();
 const showDemoAccounts = ref(false);

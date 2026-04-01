@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
 
 export function useUsersLogic() {
+  const authStore = useAuthStore();
   const users = ref<any[]>([]);
   const loading = ref(true);
   
@@ -13,7 +14,8 @@ export function useUsersLogic() {
     name: '',
     email: '',
     password: '',
-    role: 'CONTROLEUR'
+    role: 'CONTROLEUR',
+    is_active: true,
   });
 
   const fetchUsers = async () => {
@@ -75,7 +77,7 @@ export function useUsersLogic() {
   const openUserModal = () => {
     editingUserId.value = null;
     userForm.value = {
-        name: '', email: '', password: '', role: 'CONTROLEUR'
+        name: '', email: '', password: '', role: 'CONTROLEUR', is_active: true
     };
     showPassword.value = false;
     isUserModalOpen.value = true;
@@ -87,7 +89,8 @@ export function useUsersLogic() {
         name: user.name,
         email: user.email,
         password: '',
-        role: user.role
+        role: user.role,
+        is_active: Boolean(user.is_active ?? true),
     };
     showPassword.value = false;
     isUserModalOpen.value = true;
@@ -114,7 +117,6 @@ export function useUsersLogic() {
   };
 
   const handleDelete = async (user: any) => {
-      const authStore = useAuthStore();
       if (user.id === authStore.user?.id) {
           alert('Vous ne pouvez pas supprimer votre propre compte.');
           return;
@@ -128,10 +130,57 @@ export function useUsersLogic() {
       }
   };
 
+  const toggleUserStatus = async (user: any) => {
+      if (user.id === authStore.user?.id) {
+          alert('Vous ne pouvez pas désactiver votre propre compte.');
+          return;
+      }
+      try {
+          await api.put(`/users/${user.id}`, {
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              is_active: !Boolean(user.is_active ?? true),
+          });
+          fetchUsers();
+      } catch (error: any) {
+          alert(error.response?.data?.error || error.response?.data?.message || 'Erreur');
+      }
+  };
+
+  /** Utilisateur en attente de confirmation pour désactivation (modal). */
+  const pendingDeactivateUser = ref<any | null>(null);
+
+  const handleToggleUserStatus = (user: any) => {
+      if (user.id === authStore.user?.id) {
+          alert('Vous ne pouvez pas désactiver votre propre compte.');
+          return;
+      }
+      const isActive = Boolean(user.is_active ?? true);
+      if (isActive) {
+          pendingDeactivateUser.value = user;
+          return;
+      }
+      void toggleUserStatus(user);
+  };
+
+  const cancelDeactivateConfirm = () => {
+      pendingDeactivateUser.value = null;
+  };
+
+  const confirmDeactivateUser = async () => {
+      const user = pendingDeactivateUser.value;
+      if (!user) return;
+      pendingDeactivateUser.value = null;
+      await toggleUserStatus(user);
+  };
+
   return {
     loading, displayUsers, formatRole, getRoleBadgeClass,
     isUserModalOpen, editingUserId, userForm, showPassword,
     searchQuery, filterRole,
-    openUserModal, handleEdit, handleUserSubmit, handleDelete
+    pendingDeactivateUser,
+    openUserModal, handleEdit, handleUserSubmit, handleDelete,
+    handleToggleUserStatus, confirmDeactivateUser, cancelDeactivateConfirm,
   };
 }
