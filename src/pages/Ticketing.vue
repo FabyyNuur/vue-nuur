@@ -306,7 +306,7 @@
             @click="copyQrCode(selectedTicketData.qr_code)"
             class="mt-1 text-xs text-[#3E524D] underline hover:text-[#2d3d39] transition-colors"
           >
-            {{ copied ? ' Copié !' : '📋 Copier le code' }}
+            {{ copied ? 'Copié !' : '📋 Copier le code' }}
           </button>
         </div>
         
