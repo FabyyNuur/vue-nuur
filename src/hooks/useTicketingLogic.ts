@@ -195,7 +195,10 @@ export function useTicketingLogic() {
       }
     } catch (error: unknown) {
       alert(
-        `${TICKET_ISSUE_ERROR_PREFIX}: ${getApiErrorMessage(error, "")}`,
+        `${TICKET_ISSUE_ERROR_PREFIX}: ${getApiErrorMessage(
+          error,
+          "Une erreur inconnue est survenue.",
+        )}`,
       );
     } finally {
       issuing.value = false;
