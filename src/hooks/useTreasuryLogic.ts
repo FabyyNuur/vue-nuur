@@ -19,9 +19,17 @@ export function useTreasuryLogic() {
   const searchQuery = ref("");
   const saving = ref(false);
 
-  const normalizeType = (type: string | null | undefined): TreasuryTxType =>
-    String(type || "").toUpperCase() as TreasuryTxType;
+  const normalizeType = (type: string | null | undefined): TreasuryTxType => {
+    const normalized = String(type || "").toUpperCase();
+    const validTypes: TreasuryTxType[] = [TREASURY_TX_EXPENSE, TREASURY_TX_INCOME];
 
+    if ((validTypes as string[]).includes(normalized)) {
+      return normalized as TreasuryTxType;
+    }
+
+    // Fallback to the default form type if the value is not recognized
+    return DEFAULT_TREASURY_FORM.type;
+  };
   const formData = ref<TreasuryFormData>({ ...DEFAULT_TREASURY_FORM });
 
   const fetchTreasury = async () => {
