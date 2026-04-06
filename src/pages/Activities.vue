@@ -33,7 +33,12 @@
               <h3 class="text-[32px] leading-8 font-semibold text-[#31423E] tracking-tight">{{ activity.name }}</h3>
               <div class="flex items-center gap-2 mt-3">
                 <span v-if="isSubscriptionOnly(activity)" class="rounded-full bg-[#F8E6CF] text-[#C88732] px-3 py-1 text-xs font-semibold">Abonnés uniquement</span>
-                <span class="rounded-full border border-[#30B167] text-[#1D9C56] px-3 py-1 text-xs font-semibold bg-[#ECFFF4]">Active</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="Boolean(activity.is_active ?? true) ? 'border border-[#30B167] text-[#1D9C56] bg-[#ECFFF4]' : 'border border-[#E6A5A5] text-[#B24747] bg-[#FFF1F1]'"
+                >
+                  {{ Boolean(activity.is_active ?? true) ? 'Active' : 'Inactive' }}
+                </span>
               </div>
             </div>
           </div>
@@ -83,6 +88,13 @@
             Abonnement
           </button>
           <div class="flex items-center gap-2" v-if="isAdmin">
+            <button
+              @click="handleToggleStatusClick(activity)"
+              class="rounded-full border px-3 h-9 text-xs font-semibold"
+              :class="Boolean(activity.is_active ?? true) ? 'border-[#E6A5A5] text-[#B24747] bg-[#FFF1F1] hover:bg-[#FFE5E5]' : 'border-[#9AD5BC] text-[#1D9C56] bg-[#ECFFF4] hover:bg-[#DFF8EB]'"
+            >
+              {{ Boolean(activity.is_active ?? true) ? 'Désactiver' : 'Activer' }}
+            </button>
             <button
               @click="handleEdit(activity)"
               class="flex-1 rounded-full bg-[#E8EFED] text-[#334641] h-9 flex items-center justify-center gap-2 font-semibold hover:bg-[#DDE7E4]"
@@ -171,6 +183,10 @@
                 <label class="flex items-center gap-2 text-sm">
                   <input v-model="activityForm.subscription_only" type="checkbox" class="accent-[#3E524D]" />
                   Réservé aux abonnés uniquement (pas de ticket journalier)
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input v-model="activityForm.is_active" type="checkbox" class="accent-[#3E524D]" />
+                  Activité active
                 </label>
               </div>
             </div>
@@ -343,11 +359,109 @@
         </form>
       </div>
     </div>
+
+    <div
+      v-if="pendingDeactivateActivity"
+      class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+    >
+      <div class="fixed inset-0 bg-black/75" @click="cancelDeactivateActivity"></div>
+      <div
+        class="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-[#E6A5A5]/40 bg-[#FDF8F6] shadow-xl p-6 sm:p-8"
+      >
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFE8E8] ring-1 ring-[#E6A5A5]/50">
+          <Ban class="h-7 w-7 text-[#B24747]" />
+        </div>
+        <div class="text-center space-y-2">
+          <h2 class="text-xl font-bold text-[#2F413D]">Désactiver cette activité ?</h2>
+          <p class="text-sm text-[#5A6B66] leading-relaxed">
+            <span class="font-semibold text-[#31423E]">{{ pendingDeactivateActivity.name }}</span>
+            ne pourra plus recevoir d’abonnements ni de vente de tickets journaliers tant que vous ne l’aurez pas réactivée.
+          </p>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-left text-xs text-amber-950/90">
+          Si des membres ont un abonnement encore en cours sur cette activité, prévoyez un
+          <strong class="text-amber-950">remboursement ou geste commercial</strong>
+          conformément à votre politique interne.
+        </div>
+
+        <p v-if="impactLoading" class="text-center text-sm text-muted-foreground py-4">
+          Calcul des impacts sur les abonnements…
+        </p>
+        <p v-if="impactError" class="text-center text-sm text-[#B24747] py-2">{{ impactError }}</p>
+
+        <div v-if="deactivateImpact && !impactLoading" class="mt-4 space-y-3 text-left">
+          <p class="text-sm text-[#31423E] font-semibold">
+            <template v-if="deactivateImpact.affected_count === 0">
+              Aucun abonnement actif avec période non expirée sur cette activité.
+            </template>
+            <template v-else>
+              {{ deactivateImpact.affected_count }} abonnement(s) concerné(s) — total estimé :
+              {{ formatNumber(deactivateImpact.total_estimated_refund_fcfa) }} FCFA
+            </template>
+          </p>
+          <div
+            v-if="deactivateImpact.affected_subscriptions.length > 0"
+            class="max-h-48 overflow-y-auto rounded-lg border border-[#D7E0DD]"
+          >
+            <table class="w-full text-left text-[11px]">
+              <thead class="sticky top-0 bg-[#EFF4F2] text-[#637772]">
+                <tr>
+                  <th class="p-2 font-semibold">Membre</th>
+                  <th class="p-2 font-semibold">Fin période</th>
+                  <th class="p-2 font-semibold text-right">Payé</th>
+                  <th class="p-2 font-semibold text-right">Estim.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in deactivateImpact.affected_subscriptions"
+                  :key="row.subscription_id"
+                  class="border-t border-[#DEE8E4] text-[#31423E]"
+                >
+                  <td class="p-2">
+                    {{ row.first_name }} {{ row.last_name }}
+                    <span v-if="row.note === 'montant_ligne_zero'" class="block text-[10px] text-[#637772]">
+                      Montant 0 sur cette ligne
+                    </span>
+                  </td>
+                  <td class="p-2 whitespace-nowrap">
+                    {{ new Date(row.end_date).toLocaleDateString('fr-FR') }}
+                  </td>
+                  <td class="p-2 text-right">{{ formatNumber(row.amount_paid) }} F</td>
+                  <td class="p-2 text-right text-amber-800/95">{{ formatNumber(row.estimated_refund_fcfa) }} F</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[10px] leading-snug text-[#7D8F89]">
+            {{ deactivateImpact.disclaimer }}
+          </p>
+        </div>
+
+        <div class="mt-6 flex flex-col-reverse sm:flex-row gap-3 sm:justify-center">
+          <button
+            type="button"
+            @click="cancelDeactivateActivity"
+            class="h-10 rounded-full px-6 border border-[#D7E0DD] text-[#5A6B66] hover:bg-[#EFF4F2] w-full sm:w-auto"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            @click="confirmDeactivateActivity"
+            class="h-10 rounded-full px-6 w-full sm:w-auto bg-[#B24747] text-white font-semibold hover:bg-[#9a3a3a]"
+          >
+            Désactiver
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Edit2, HeartPulse, Info, Plus, Trash2, X } from 'lucide-vue-next';
+import { Ban, Edit2, HeartPulse, Info, Plus, Trash2, X } from 'lucide-vue-next';
 import { useActivitiesLogic } from '../hooks/useActivitiesLogic';
 
 const {
@@ -359,6 +473,13 @@ const {
   selectedActivity, selectedClient, subscriptionTypeOptions,
   selectedSubscriptionPrice, registrationFeeDue, totalDue,
   openActivityModal, handleEdit, handleActivitySubmit, handleDelete,
-  openSubscriptionModal, goToActivityDetails, handleSubscriptionSubmit
+  openSubscriptionModal, goToActivityDetails, handleSubscriptionSubmit,
+  pendingDeactivateActivity,
+  deactivateImpact,
+  impactLoading,
+  impactError,
+  handleToggleStatusClick,
+  cancelDeactivateActivity,
+  confirmDeactivateActivity,
 } = useActivitiesLogic();
 </script>

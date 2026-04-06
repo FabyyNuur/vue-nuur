@@ -1,5 +1,6 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '../services/api';
+import { isTicketSaleActivityActive } from '../types/ticketing';
 
 export function useClientsLogic() {
   const clients = ref<any[]>([]);
@@ -164,6 +165,10 @@ export function useClientsLogic() {
     const isPack = hasPackName || hasAllActivities;
 
     originalActivityIds.value = isPack ? [] : currentIds;
+    const activeCurrentIds = currentIds.filter((id) => {
+      const act = activities.value.find((a) => a.id === id);
+      return act && isTicketSaleActivityActive(act);
+    });
     editForm.value = {
       first_name: client.first_name,
       last_name: client.last_name,
@@ -171,7 +176,7 @@ export function useClientsLogic() {
       phone: client.phone || '',
       address: client.address || '',
       subscription_mode: isPack ? 'pack' : 'custom',
-      selected_activity_ids: isPack ? [] : currentIds,
+      selected_activity_ids: isPack ? [] : activeCurrentIds,
       duration_months: '1',
       payment_method: 'CASH',
       discount_percent: 0,
@@ -211,11 +216,28 @@ export function useClientsLogic() {
   const fetchActivities = async () => {
     try {
       const response = await api.get('/activities');
-      activities.value = response.data.data;
+      activities.value = response.data.data || [];
     } catch (error) {
       console.error(error);
     }
   };
+
+  const subscribableActivities = computed(() =>
+    activities.value.filter((a) => isTicketSaleActivityActive(a)),
+  );
+
+  const activitiesForEditModal = computed(() => {
+    if (!editClient.value) {
+      return subscribableActivities.value;
+    }
+    const base = subscribableActivities.value;
+    const extra = activities.value.filter(
+      (a) =>
+        originalActivityIds.value.includes(a.id) &&
+        !base.some((b) => b.id === a.id),
+    );
+    return [...base, ...extra];
+  });
 
   onMounted(() => {
     fetchClients();
@@ -253,8 +275,14 @@ export function useClientsLogic() {
           return;
       }
 
-      const activityIds = formData.value.subscription_mode === 'pack' 
-          ? activities.value.map(a => a.id)
+      if (formData.value.subscription_mode === 'pack' && subscribableActivities.value.length === 0) {
+        alert("Aucune activité active : le pack complet n'est pas disponible pour de nouveaux abonnements.");
+        return;
+      }
+
+      const activityIds =
+        formData.value.subscription_mode === 'pack'
+          ? subscribableActivities.value.map((a) => a.id)
           : formData.value.selected_activity_ids;
 
       const payload = {
@@ -291,8 +319,15 @@ export function useClientsLogic() {
           return;
       }
 
-      const activityIds = editForm.value.subscription_mode === 'pack'
-          ? activities.value.map(a => a.id)
+      if (editForm.value.subscription_mode === 'pack' && subscribableActivities.value.length === 0) {
+        saveError.value = "Aucune activité active : impossible d'appliquer le pack.";
+        saving.value = false;
+        return;
+      }
+
+      const activityIds =
+        editForm.value.subscription_mode === 'pack'
+          ? subscribableActivities.value.map((a) => a.id)
           : editForm.value.selected_activity_ids;
 
       const payload = {
@@ -322,7 +357,14 @@ export function useClientsLogic() {
   };
 
   return {
-    clients, activities, isModalOpen, searchQuery, qrClient, detailClient,
+    clients,
+    activities,
+    subscribableActivities,
+    activitiesForEditModal,
+    isModalOpen,
+    searchQuery,
+    qrClient,
+    detailClient,
     editClient, saving, saveError, saveSuccess, isHistoryOpen, currentHistory, loadingHistory,
     formData, editForm, copied, calculatedRegFee, calculatedSubFee, formTotalDue, formExpirationDate,
     editRegFee, editSubFee, editTotalDue, editExpirationDate, filteredClients, originalActivityIds,

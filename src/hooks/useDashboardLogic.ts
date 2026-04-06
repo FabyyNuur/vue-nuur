@@ -1,77 +1,84 @@
-import { ref, onMounted, computed } from 'vue';
-import api from '../services/api';
+import { ref, onMounted, computed } from "vue";
+import api from "../services/api";
+import type {
+  DashboardApiPayload,
+  DashboardChartVm,
+  DashboardPeriodId,
+  DashboardScanLog,
+  DashboardStats,
+} from "../types/dashboard";
+import {
+  DASHBOARD_CHART_OPTIONS,
+  DASHBOARD_PERIODS,
+  DASHBOARD_PERIOD_SUBLABELS,
+  INITIAL_CHART_DATA,
+  INITIAL_WEEKLY_STATS,
+} from "../constants/dashboard";
 
 export function useDashboardLogic() {
-  const stats = ref<any>(null);
+  const stats = ref<DashboardStats | null>(null);
   const loading = ref(true);
-  const selectedPeriod = ref('day');
+  const selectedPeriod = ref<DashboardPeriodId>("day");
 
-  const periods = [
-    { id: 'day', label: 'Jour' },
-    { id: 'week', label: 'Semaine' },
-    { id: 'month', label: 'Mois' },
-    { id: 'year', label: 'Année' },
-    { id: 'all', label: 'Global' }
-  ];
-
-  const chartData = ref<any>({
-    labels: [],
-    datasets: []
+  const chartData = ref<DashboardChartVm>({
+    labels: [...INITIAL_CHART_DATA.labels],
+    datasets: [...INITIAL_CHART_DATA.datasets],
   });
 
-  const weeklyStats = ref<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const weeklyStats = ref<number[]>([...INITIAL_WEEKLY_STATS]);
 
   const fetchStats = async () => {
     loading.value = true;
     try {
       const response = await api.get(`/dashboard?period=${selectedPeriod.value}`);
-      stats.value = response.data.stats;
-      
-      // Mapping du nouveau format: response.data.chart.{ labels, revenues, expenses }
-      if (response.data.chart && response.data.chart.labels?.length > 0) {
-        const labels = response.data.chart.labels;
-        const revenues = response.data.chart.revenues ?? response.data.chart.values ?? [];
-        const expenses = response.data.chart.expenses ?? [];
+      const data = response.data as DashboardApiPayload;
+      stats.value = data.stats ?? null;
+
+      if (data.chart && data.chart.labels && data.chart.labels.length > 0) {
+        const labels = data.chart.labels;
+        const revenues = data.chart.revenues ?? data.chart.values ?? [];
+        const expenses = data.chart.expenses ?? [];
 
         chartData.value = {
           labels,
           datasets: [
             {
               fill: true,
-              label: 'Revenus',
+              label: "Revenus",
               data: revenues,
-              borderColor: '#D9A05B',
-              backgroundColor: 'rgba(217, 160, 91, 0.15)',
+              borderColor: "#D9A05B",
+              backgroundColor: "rgba(217, 160, 91, 0.15)",
               tension: 0.4,
               pointRadius: 4,
-              pointBackgroundColor: '#fff',
+              pointBackgroundColor: "#fff",
               pointBorderWidth: 2,
-              borderWidth: 3
+              borderWidth: 3,
             },
             {
               fill: true,
-              label: 'Dépenses',
+              label: "Dépenses",
               data: expenses,
-              borderColor: '#E87A5B',
-              backgroundColor: 'rgba(232, 122, 91, 0.1)',
+              borderColor: "#E87A5B",
+              backgroundColor: "rgba(232, 122, 91, 0.1)",
               tension: 0.4,
               pointRadius: 4,
-              pointBackgroundColor: '#fff',
+              pointBackgroundColor: "#fff",
               pointBorderWidth: 2,
-              borderWidth: 3
-            }
-          ]
+              borderWidth: 3,
+            },
+          ],
         };
 
-        // Construire weeklyStats si période = week (pourcentage relatif au max)
-        if (selectedPeriod.value === 'week' && revenues.length === 7) {
+        if (selectedPeriod.value === "week" && revenues.length === 7) {
           const maxVal = Math.max(...revenues, 1);
-          weeklyStats.value = revenues.map((v: number) => Math.round((v / maxVal) * 100));
+          weeklyStats.value = revenues.map((v: number) =>
+            Math.round((v / maxVal) * 100),
+          );
         }
       }
-      
-      if (response.data.recentLogs) {
-        stats.value.recentLogs = response.data.recentLogs;
+
+      if (data.recentLogs?.length && stats.value) {
+        stats.value.recentLogs = data.recentLogs as DashboardScanLog[];
       }
     } catch (error) {
       console.error(error);
@@ -81,78 +88,59 @@ export function useDashboardLogic() {
   };
 
   const changePeriod = (id: string) => {
-    selectedPeriod.value = id;
-    fetchStats();
+    selectedPeriod.value = id as DashboardPeriodId;
+    void fetchStats();
   };
 
   onMounted(() => {
-    fetchStats();
+    void fetchStats();
   });
 
-  const currentDate = computed(() => {
-    return new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  });
+  const currentDate = computed(() =>
+    new Date().toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+  );
 
-  const periodLabel = computed(() => {
-    switch (selectedPeriod.value) {
-      case 'day': return "aujourd'hui";
-      case 'week': return "de la semaine";
-      case 'month': return "du mois";
-      case 'year': return "de l'année";
-      case 'all': return "depuis le début";
-      default: return "";
-    }
-  });
+  const periodLabel = computed(
+    () => DASHBOARD_PERIOD_SUBLABELS[selectedPeriod.value] ?? "",
+  );
 
-  const chartOptions: any = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { 
-      legend: { 
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          font: { size: 10, weight: 'bold' }
-        }
-      }, 
-      tooltip: { 
-        mode: 'index', 
-        intersect: false,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        titleColor: '#2C3E3A',
-        bodyColor: '#2C3E3A',
-        borderColor: '#eee',
-        borderWidth: 1,
-        padding: 10,
-        boxPadding: 5
-      } 
-    },
-    scales: {
-      y: { 
-        display: true, 
-        grid: { color: 'rgba(0,0,0,0.03)' },
-        ticks: { font: { size: 9 } }
-      },
-      x: { 
-        grid: { display: false }, 
-        ticks: { font: { size: 10, weight: 'bold' } } 
-      }
-    }
-  };
+  const chartOptions = DASHBOARD_CHART_OPTIONS;
 
-  const formatCFA = (val: number) => {
-    return new Intl.NumberFormat('fr-FR').format(val) + ' FCFA';
-  };
+  const formatCFA = (val: number) =>
+    new Intl.NumberFormat("fr-FR").format(val) + " FCFA";
 
-  const formatDate = (date: string) => {
+  const formatDate = (date?: string) => {
+    if (!date) return "";
     const d = new Date(date);
-    const day = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
-    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const day = d.toLocaleDateString("fr-FR", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    });
+    const time = d.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     return `${day} • ${time}`;
   };
 
   return {
-    stats, loading, selectedPeriod, periods, chartData, weeklyStats,
-    currentDate, periodLabel, chartOptions, formatCFA, formatDate, changePeriod
+    stats,
+    loading,
+    selectedPeriod,
+    periods: DASHBOARD_PERIODS,
+    chartData,
+    weeklyStats,
+    currentDate,
+    periodLabel,
+    chartOptions,
+    formatCFA,
+    formatDate,
+    changePeriod,
   };
 }

@@ -65,6 +65,13 @@
           </span>
           <div class="flex gap-2">
             <button
+              @click="handleToggleUserStatus(user)"
+              class="rounded-full border px-3 text-[11px] font-semibold"
+              :class="Boolean(user.is_active ?? true) ? 'border-[#E6A5A5] text-[#B24747] bg-[#FFF1F1] hover:bg-[#FFE5E5]' : 'border-[#9AD5BC] text-[#1D9C56] bg-[#ECFFF4] hover:bg-[#DFF8EB]'"
+            >
+              {{ Boolean(user.is_active ?? true) ? 'Suspendre l’accès' : 'Rétablir l’accès' }}
+            </button>
+            <button
               @click="handleEdit(user)"
               class="w-8 h-8 rounded-full bg-white text-[#5B8A8A] hover:text-[#3E524D] hover:bg-slate-100 flex items-center justify-center border shadow-sm transition-colors"
               title="Modifier"
@@ -77,6 +84,47 @@
               title="Supprimer"
             >
               <Trash2 class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation désactivation -->
+    <div v-if="pendingDeactivateUser" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-black/70 backdrop-blur-[2px]" @click="cancelDeactivateConfirm"></div>
+      <div
+        class="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border border-[#F0E0E0] bg-white shadow-2xl animate-in fade-in zoom-in duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deactivate-modal-title"
+      >
+        <div class="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#FFF1F1] opacity-90 blur-2xl pointer-events-none"></div>
+        <div class="relative p-8 text-center">
+          <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-[#FFE5E5] to-[#FFF8F8] ring-1 ring-[#E6A5A5]/40">
+            <UserX class="h-7 w-7 text-[#B24747]" />
+          </div>
+          <h2 id="deactivate-modal-title" class="text-xl font-bold text-[#2C3E3A]">
+            Désactiver ce compte ?
+          </h2>
+          <p class="mt-3 text-sm leading-relaxed text-[#5B8A8A]">
+            <span class="font-semibold text-[#2C3E3A]">{{ pendingDeactivateUser.name }}</span>
+            ne pourra plus se connecter jusqu'à ce que vous réactiviez l'accès depuis cette liste.
+          </p>
+          <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              @click="cancelDeactivateConfirm"
+              class="h-11 w-full rounded-full border border-input bg-white px-6 text-sm font-semibold text-[#2C3E3A] shadow-sm transition-colors hover:bg-slate-50 sm:w-auto"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              @click="confirmDeactivateUser"
+              class="h-11 w-full rounded-full bg-[#B24747] px-6 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[#962828] sm:w-auto"
+            >
+              Désactiver
             </button>
           </div>
         </div>
@@ -130,6 +178,10 @@
               <option value="CONTROLEUR">Contrôleur (scanne & accueil)</option>
             </select>
           </div>
+          <label class="flex items-center gap-2 text-sm font-medium text-[#2C3E3A]">
+            <input v-model="userForm.is_active" type="checkbox" class="accent-[#3E524D]" />
+            Autoriser la connexion
+          </label>
 
           <div class="flex justify-end gap-3 pt-4 border-t">
             <button type="button" @click="isUserModalOpen = false" class="h-10 px-5 rounded-full border border-input text-sm font-medium hover:bg-slate-50 transition-colors">Annuler</button>
@@ -144,13 +196,14 @@
 </template>
 
 <script setup lang="ts">
-import { User, Plus, Edit2, Trash2, X, Eye, EyeOff, Search, Filter, ChevronDown } from 'lucide-vue-next';
+import { User, UserX, Plus, Edit2, Trash2, X, Eye, EyeOff, Search, Filter, ChevronDown } from 'lucide-vue-next';
 import { useUsersLogic } from '../hooks/useUsersLogic';
 
 const { 
     loading, displayUsers, formatRole, getRoleBadgeClass,
     isUserModalOpen, editingUserId, userForm, showPassword,
-    searchQuery, filterRole,
-    openUserModal, handleEdit, handleUserSubmit, handleDelete
+    searchQuery, filterRole, pendingDeactivateUser,
+    openUserModal, handleEdit, handleUserSubmit, handleDelete,
+    handleToggleUserStatus, confirmDeactivateUser, cancelDeactivateConfirm,
 } = useUsersLogic();
 </script>

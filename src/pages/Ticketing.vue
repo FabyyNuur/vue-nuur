@@ -92,7 +92,7 @@
             <div v-if="formData.activity_id && selectedActivityObj" class="p-4 bg-blue-50 text-blue-900 rounded-lg border border-blue-100 mt-4">
               <p class="text-sm font-medium text-blue-800">Montant total:</p>
               <p class="text-2xl font-bold">
-                {{ (selectedActivityObj.daily_ticket_price * formData.quantity).toLocaleString() }} FCFA
+                {{ ((selectedActivityObj.daily_ticket_price ?? 0) * formData.quantity).toLocaleString() }} FCFA
               </p>
             </div>
           </div>
@@ -233,10 +233,10 @@
                 <p class="font-medium text-[#2C3E3A]">{{ ticket.qr_code.split('-')[0] }}</p>
                 <p class="text-sm text-muted-foreground">{{ getActivityName(ticket.activity_id) }}</p>
                 <p class="text-xs text-muted-foreground/70">
-                  Créé à {{ new Date(ticket.created_at).toLocaleTimeString('fr-FR') }}
+                  Créé à {{ ticket.created_at ? new Date(ticket.created_at).toLocaleTimeString('fr-FR') : '—' }}
                 </p>
                 <p class="text-xs text-muted-foreground/70">
-                  Valide jusqu'au {{ new Date(ticket.valid_until).toLocaleString('fr-FR') }}
+                  Valide jusqu'au {{ ticket.valid_until ? new Date(ticket.valid_until).toLocaleString('fr-FR') : '—' }}
                 </p>
               </div>
             </div>
@@ -306,7 +306,7 @@
             @click="copyQrCode(selectedTicketData.qr_code)"
             class="mt-1 text-xs text-[#3E524D] underline hover:text-[#2d3d39] transition-colors"
           >
-            {{ copied ? '✅ Copié !' : '📋 Copier le code' }}
+            {{ copied ? 'Copié !' : '📋 Copier le code' }}
           </button>
         </div>
         
@@ -320,7 +320,7 @@
               {{ getActivityName(selectedTicketData.activity_id) }}
             </p>
             <p class="text-sm text-muted-foreground font-medium mt-1">
-              Expire le {{ new Date(selectedTicketData.valid_until).toLocaleString('fr-FR') }}
+              Expire le {{ selectedTicketData.valid_until ? new Date(selectedTicketData.valid_until).toLocaleString('fr-FR') : '—' }}
             </p>
           </div>
           

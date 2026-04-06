@@ -2,6 +2,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { useAuthStore } from '../stores/auth';
+import { isTicketSaleActivityActive } from '../types/ticketing';
 
 export type SubscriptionDetail = {
   subscription_id: number;
@@ -86,6 +87,14 @@ export function useActivityDetailsLogic() {
 
   const goToNewSubscription = () => {
     if (!activityId.value) {
+      return;
+    }
+
+    const act = activity.value;
+    if (!act || !isTicketSaleActivityActive(act)) {
+      alert(
+        "Cette activité est désactivée. Aucun abonnement n'est possible tant qu'elle n'est pas réactivée.",
+      );
       return;
     }
 
