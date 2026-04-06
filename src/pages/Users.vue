@@ -91,7 +91,7 @@
     </div>
 
     <!-- Confirmation désactivation -->
-    <div v-if="pendingDeactivateUser" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+    <div v-if="pendingDeactivateUser" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-black/70 backdrop-blur-[2px]" @click="cancelDeactivateConfirm"></div>
       <div
         class="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border border-[#F0E0E0] bg-white shadow-2xl animate-in fade-in zoom-in duration-200"
