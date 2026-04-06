@@ -1,6 +1,7 @@
 import { ref, onMounted, computed } from "vue";
 import api from "../services/api";
 import { getApiErrorMessage } from "../lib/apiError";
+import { isTicketSaleActivityActive } from "../types/ticketing";
 import type {
   TicketingActivity,
   TicketFilter,
@@ -75,7 +76,7 @@ export function useTicketingLogic() {
   const availableActivities = computed(() =>
     activities.value.filter(
       (a) =>
-        Boolean(a.is_active ?? true) &&
+        isTicketSaleActivityActive(a) &&
         !a.subscription_only &&
         (a.daily_ticket_price ?? 0) > 0,
     ),
@@ -150,7 +151,9 @@ export function useTicketingLogic() {
     }
 
     if (dateFrom.value) {
-      base = base.filter((t) => (t.created_at || "").startsWith(dateFrom.value));
+      base = base.filter((t) =>
+        (t.created_at || "").startsWith(dateFrom.value),
+      );
     }
 
     return base;

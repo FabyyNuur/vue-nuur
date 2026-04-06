@@ -1,9 +1,9 @@
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { isAxiosError } from 'axios';
-import api from '../services/api';
-import { useAuthStore } from '../stores/auth';
-import { isTicketSaleActivityActive } from '../types/ticketing';
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { isAxiosError } from "axios";
+import api from "../services/api";
+import { useAuthStore } from "../stores/auth";
+import { isTicketSaleActivityActive } from "../types/ticketing";
 
 export type Activity = {
   id: number;
@@ -49,8 +49,15 @@ export type DeactivateImpactData = {
 };
 
 export function useActivitiesLogic() {
-  const fallbackColor = '#F36F6F';
-  const colorPresets = ['#F36F6F', '#4F46E5', '#63D1BE', '#D9A05B', '#22C55E', '#0EA5E9'];
+  const fallbackColor = "#F36F6F";
+  const colorPresets = [
+    "#F36F6F",
+    "#4F46E5",
+    "#63D1BE",
+    "#D9A05B",
+    "#22C55E",
+    "#0EA5E9",
+  ];
 
   const loading = ref(true);
   const activities = ref<Activity[]>([]);
@@ -62,7 +69,7 @@ export function useActivitiesLogic() {
   const editingActivityId = ref<number | null>(null);
 
   const activityForm = ref({
-    name: '',
+    name: "",
     registration_fee: 0,
     daily_ticket_price: 0,
     monthly_price: 0,
@@ -77,24 +84,26 @@ export function useActivitiesLogic() {
   const isSubscriptionModalOpen = ref(false);
   const selectedActivityId = ref<number | null>(null);
   const subscriptionForm = ref({
-    clientMode: 'existing' as 'existing' | 'new',
+    clientMode: "existing" as "existing" | "new",
     client_id: 0,
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    address: '',
-    subscription_type: 'monthly',
-    payment_method: 'CASH',
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    address: "",
+    subscription_type: "monthly",
+    payment_method: "CASH",
     only_registration_today: false,
     include_registration_fee: true,
     waive_registration_fee: false,
     discount_percent: 0,
   });
 
-  const formatNumber = (num: number | null | undefined) => Number(num || 0).toLocaleString('fr-FR');
+  const formatNumber = (num: number | null | undefined) =>
+    Number(num || 0).toLocaleString("fr-FR");
 
-  const isSubscriptionOnly = (activity: Activity) => Boolean(activity.subscription_only);
+  const isSubscriptionOnly = (activity: Activity) =>
+    Boolean(activity.subscription_only);
 
   const activityColor = (activity: Activity) => {
     if (activity.color && activity.color.trim()) {
@@ -104,10 +113,14 @@ export function useActivitiesLogic() {
   };
 
   const hexToRgba = (hex: string, alpha: number) => {
-    const normalized = hex.replace('#', '');
-    const value = normalized.length === 3
-      ? normalized.split('').map((char) => char + char).join('')
-      : normalized;
+    const normalized = hex.replace("#", "");
+    const value =
+      normalized.length === 3
+        ? normalized
+            .split("")
+            .map((char) => char + char)
+            .join("")
+        : normalized;
     const intValue = parseInt(value, 16);
     const r = (intValue >> 16) & 255;
     const g = (intValue >> 8) & 255;
@@ -123,31 +136,62 @@ export function useActivitiesLogic() {
     };
   };
 
-  const selectedActivity = computed(() => activities.value.find((item) => item.id === selectedActivityId.value) || null);
-  const selectedClient = computed(() => clients.value.find(c => c.id === subscriptionForm.value.client_id) || null);
+  const selectedActivity = computed(
+    () =>
+      activities.value.find((item) => item.id === selectedActivityId.value) ||
+      null,
+  );
+  const selectedClient = computed(
+    () =>
+      clients.value.find((c) => c.id === subscriptionForm.value.client_id) ||
+      null,
+  );
 
   const subscriptionTypeOptions = computed(() => {
     if (!selectedActivity.value) {
-      return [{ value: 'monthly', label: 'Mensuel', price: 0 }];
+      return [{ value: "monthly", label: "Mensuel", price: 0 }];
     }
 
     const options = [
-      { value: 'monthly', label: 'Mensuel', price: Number(selectedActivity.value.monthly_price || 0) },
-      { value: 'quarterly', label: 'Trimestriel', price: Number(selectedActivity.value.quarterly_price || 0) },
-      { value: 'semester', label: 'Semestriel', price: Number(selectedActivity.value.semester_price || 0) },
-      { value: 'yearly', label: 'Annuel', price: Number(selectedActivity.value.yearly_price || 0) },
+      {
+        value: "monthly",
+        label: "Mensuel",
+        price: Number(selectedActivity.value.monthly_price || 0),
+      },
+      {
+        value: "quarterly",
+        label: "Trimestriel",
+        price: Number(selectedActivity.value.quarterly_price || 0),
+      },
+      {
+        value: "semester",
+        label: "Semestriel",
+        price: Number(selectedActivity.value.semester_price || 0),
+      },
+      {
+        value: "yearly",
+        label: "Annuel",
+        price: Number(selectedActivity.value.yearly_price || 0),
+      },
     ].filter((option) => option.price > 0);
 
-    return options.length ? options : [{ value: 'monthly', label: 'Mensuel', price: 0 }];
+    return options.length
+      ? options
+      : [{ value: "monthly", label: "Mensuel", price: 0 }];
   });
 
   const selectedSubscriptionPrice = computed(() => {
-    const selectedType = subscriptionTypeOptions.value.find((option) => option.value === subscriptionForm.value.subscription_type);
+    const selectedType = subscriptionTypeOptions.value.find(
+      (option) => option.value === subscriptionForm.value.subscription_type,
+    );
     return selectedType ? selectedType.price : 0;
   });
 
   const registrationFeeDue = computed(() => {
-    if (!selectedActivity.value || subscriptionForm.value.waive_registration_fee) {
+    if (
+      !selectedActivity.value ||
+      subscriptionForm.value.waive_registration_fee
+    ) {
       return 0;
     }
     return Number(selectedActivity.value.registration_fee || 0);
@@ -158,10 +202,17 @@ export function useActivitiesLogic() {
     if (subscriptionForm.value.only_registration_today) {
       raw = registrationFeeDue.value;
     } else {
-      const includeRegistration = subscriptionForm.value.include_registration_fee && !subscriptionForm.value.waive_registration_fee;
-      raw = selectedSubscriptionPrice.value + (includeRegistration ? registrationFeeDue.value : 0);
+      const includeRegistration =
+        subscriptionForm.value.include_registration_fee &&
+        !subscriptionForm.value.waive_registration_fee;
+      raw =
+        selectedSubscriptionPrice.value +
+        (includeRegistration ? registrationFeeDue.value : 0);
     }
-    const discount = Math.min(Math.max(subscriptionForm.value.discount_percent || 0, 0), 100);
+    const discount = Math.min(
+      Math.max(subscriptionForm.value.discount_percent || 0, 0),
+      100,
+    );
     return Math.round(raw * (1 - discount / 100));
   });
 
@@ -170,33 +221,45 @@ export function useActivitiesLogic() {
       return;
     }
 
-    const hasSelectedType = subscriptionTypeOptions.value.some((option) => option.value === subscriptionForm.value.subscription_type);
+    const hasSelectedType = subscriptionTypeOptions.value.some(
+      (option) => option.value === subscriptionForm.value.subscription_type,
+    );
     if (!hasSelectedType) {
-      subscriptionForm.value.subscription_type = subscriptionTypeOptions.value[0].value;
+      subscriptionForm.value.subscription_type =
+        subscriptionTypeOptions.value[0].value;
     }
   });
 
-  watch(() => subscriptionForm.value.waive_registration_fee, (waive) => {
-    if (waive) {
-      subscriptionForm.value.include_registration_fee = false;
-    }
-  });
+  watch(
+    () => subscriptionForm.value.waive_registration_fee,
+    (waive) => {
+      if (waive) {
+        subscriptionForm.value.include_registration_fee = false;
+      }
+    },
+  );
 
-  watch(() => subscriptionForm.value.only_registration_today, (onlyRegistration) => {
-    if (onlyRegistration) {
-      subscriptionForm.value.include_registration_fee = true;
-    }
-  });
+  watch(
+    () => subscriptionForm.value.only_registration_today,
+    (onlyRegistration) => {
+      if (onlyRegistration) {
+        subscriptionForm.value.include_registration_fee = true;
+      }
+    },
+  );
 
-  watch(() => activityForm.value.subscription_only, (isOnlySubscription) => {
-    if (isOnlySubscription) {
-      activityForm.value.daily_ticket_price = 0;
-    }
-  });
+  watch(
+    () => activityForm.value.subscription_only,
+    (isOnlySubscription) => {
+      if (isOnlySubscription) {
+        activityForm.value.daily_ticket_price = 0;
+      }
+    },
+  );
 
   const resetActivityForm = () => {
     activityForm.value = {
-      name: '',
+      name: "",
       registration_fee: 0,
       daily_ticket_price: 0,
       monthly_price: 0,
@@ -211,15 +274,15 @@ export function useActivitiesLogic() {
 
   const resetSubscriptionForm = () => {
     subscriptionForm.value = {
-      clientMode: 'existing',
+      clientMode: "existing",
       client_id: 0,
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      address: '',
-      subscription_type: subscriptionTypeOptions.value[0]?.value || 'monthly',
-      payment_method: 'CASH',
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      address: "",
+      subscription_type: subscriptionTypeOptions.value[0]?.value || "monthly",
+      payment_method: "CASH",
       only_registration_today: false,
       include_registration_fee: true,
       waive_registration_fee: false,
@@ -229,7 +292,7 @@ export function useActivitiesLogic() {
 
   const fetchActivities = async () => {
     try {
-      const response = await api.get('/activities');
+      const response = await api.get("/activities");
       activities.value = response.data.data;
     } catch (error) {
       console.error(error);
@@ -240,7 +303,7 @@ export function useActivitiesLogic() {
 
   const fetchClients = async () => {
     try {
-      const response = await api.get('/clients');
+      const response = await api.get("/clients");
       clients.value = response.data.data;
     } catch (error) {
       console.error(error);
@@ -265,7 +328,9 @@ export function useActivitiesLogic() {
       return;
     }
 
-    const found = activities.value.find((item) => item.id === subscribeActivityId);
+    const found = activities.value.find(
+      (item) => item.id === subscribeActivityId,
+    );
     if (!found) {
       return;
     }
@@ -274,12 +339,12 @@ export function useActivitiesLogic() {
       alert(
         "Cette activité est désactivée. Aucun abonnement n'est possible tant qu'elle n'est pas réactivée.",
       );
-      await router.replace({ path: '/activities', query: {} });
+      await router.replace({ path: "/activities", query: {} });
       return;
     }
 
     openSubscriptionModal(found);
-    await router.replace({ path: '/activities' });
+    await router.replace({ path: "/activities" });
   };
 
   onMounted(async () => {
@@ -327,7 +392,7 @@ export function useActivitiesLogic() {
       if (editingActivityId.value) {
         await api.put(`/activities/${editingActivityId.value}`, payload);
       } else {
-        await api.post('/activities', payload);
+        await api.post("/activities", payload);
       }
 
       await fetchActivities();
@@ -344,7 +409,7 @@ export function useActivitiesLogic() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Voulez-vous vraiment supprimer cette activité ?')) {
+    if (!confirm("Voulez-vous vraiment supprimer cette activité ?")) {
       return;
     }
 
@@ -356,7 +421,7 @@ export function useActivitiesLogic() {
       const message =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
-        'Erreur lors de la suppression';
+        "Erreur lors de la suppression";
       alert(message);
     }
   };
@@ -365,6 +430,7 @@ export function useActivitiesLogic() {
   const deactivateImpact = ref<DeactivateImpactData | null>(null);
   const impactLoading = ref(false);
   const impactError = ref<string | null>(null);
+  let deactivateImpactRequestSeq = 0;
 
   const toggleActivityStatus = async (activity: Activity) => {
     try {
@@ -394,17 +460,34 @@ export function useActivitiesLogic() {
 
   watch(pendingDeactivateActivity, async (activity) => {
     if (!activity) {
+      deactivateImpactRequestSeq += 1;
       deactivateImpact.value = null;
       impactError.value = null;
       return;
     }
+
+    const requestSeq = ++deactivateImpactRequestSeq;
+    const requestedActivityId = activity.id;
+
     impactLoading.value = true;
     impactError.value = null;
     deactivateImpact.value = null;
     try {
       const res = await api.get(`/activities/${activity.id}/deactivate-impact`);
+      if (
+        requestSeq !== deactivateImpactRequestSeq ||
+        pendingDeactivateActivity.value?.id !== requestedActivityId
+      ) {
+        return;
+      }
       deactivateImpact.value = res.data.data as DeactivateImpactData;
     } catch (error) {
+      if (
+        requestSeq !== deactivateImpactRequestSeq ||
+        pendingDeactivateActivity.value?.id !== requestedActivityId
+      ) {
+        return;
+      }
       let msg = "Impossible de charger l'estimation des remboursements.";
       if (isAxiosError(error)) {
         const data = error.response?.data;
@@ -423,6 +506,12 @@ export function useActivitiesLogic() {
       }
       impactError.value = msg;
     } finally {
+      if (
+        requestSeq !== deactivateImpactRequestSeq ||
+        pendingDeactivateActivity.value?.id !== requestedActivityId
+      ) {
+        return;
+      }
       impactLoading.value = false;
     }
   });
@@ -464,25 +553,31 @@ export function useActivitiesLogic() {
     const paymentMethod = subscriptionForm.value.payment_method;
 
     try {
-      if (subscriptionForm.value.clientMode === 'existing') {
+      if (subscriptionForm.value.clientMode === "existing") {
         if (!subscriptionForm.value.client_id) {
-          alert('Veuillez sélectionner un client existant.');
+          alert("Veuillez sélectionner un client existant.");
           return;
         }
 
-        await api.post(`/clients/${subscriptionForm.value.client_id}/subscribe`, {
-          activity_id: selectedActivity.value.id,
-          amount_paid: amountPaid,
-          payment_method: paymentMethod,
-          subscription_type: subscriptionForm.value.subscription_type,
-        });
+        await api.post(
+          `/clients/${subscriptionForm.value.client_id}/subscribe`,
+          {
+            activity_id: selectedActivity.value.id,
+            amount_paid: amountPaid,
+            payment_method: paymentMethod,
+            subscription_type: subscriptionForm.value.subscription_type,
+          },
+        );
       } else {
-        if (!subscriptionForm.value.first_name || !subscriptionForm.value.last_name) {
-          alert('Le prénom et le nom sont obligatoires.');
+        if (
+          !subscriptionForm.value.first_name ||
+          !subscriptionForm.value.last_name
+        ) {
+          alert("Le prénom et le nom sont obligatoires.");
           return;
         }
 
-        await api.post('/clients', {
+        await api.post("/clients", {
           first_name: subscriptionForm.value.first_name,
           last_name: subscriptionForm.value.last_name,
           email: subscriptionForm.value.email || null,
@@ -492,36 +587,61 @@ export function useActivitiesLogic() {
           amount_paid: amountPaid,
           payment_method: paymentMethod,
           subscription_type: subscriptionForm.value.subscription_type,
-          include_registration_fee: subscriptionForm.value.include_registration_fee && !subscriptionForm.value.waive_registration_fee,
+          include_registration_fee:
+            subscriptionForm.value.include_registration_fee &&
+            !subscriptionForm.value.waive_registration_fee,
         });
       }
 
       await fetchClients();
       isSubscriptionModalOpen.value = false;
       resetSubscriptionForm();
-      alert('Abonnement enregistré avec succès.');
+      alert("Abonnement enregistré avec succès.");
     } catch (error) {
       alert("Erreur lors de l'enregistrement de l'abonnement");
     }
   };
 
   const authStore = useAuthStore();
-  const isAdmin = computed(() => authStore.user?.role?.toUpperCase() === 'ADMIN');
+  const isAdmin = computed(
+    () => authStore.user?.role?.toUpperCase() === "ADMIN",
+  );
   const isCashierOrAdmin = computed(() => {
     const role = authStore.user?.role?.toUpperCase();
-    return role === 'ADMIN' || role === 'CAISSIER';
+    return role === "ADMIN" || role === "CAISSIER";
   });
 
   return {
-    loading, activities, clients, isAdmin, isCashierOrAdmin,
-    isActivityModalOpen, editingActivityId, activityForm,
-    isSubscriptionModalOpen, selectedActivityId, subscriptionForm,
+    loading,
+    activities,
+    clients,
+    isAdmin,
+    isCashierOrAdmin,
+    isActivityModalOpen,
+    editingActivityId,
+    activityForm,
+    isSubscriptionModalOpen,
+    selectedActivityId,
+    subscriptionForm,
     colorPresets,
-    formatNumber, isSubscriptionOnly, activityColor, hexToRgba, activityBadgeStyle,
-    selectedActivity, selectedClient, subscriptionTypeOptions,
-    selectedSubscriptionPrice, registrationFeeDue, totalDue,
-    openActivityModal, handleEdit, handleActivitySubmit, handleDelete,
-    openSubscriptionModal, goToActivityDetails, handleSubscriptionSubmit,
+    formatNumber,
+    isSubscriptionOnly,
+    activityColor,
+    hexToRgba,
+    activityBadgeStyle,
+    selectedActivity,
+    selectedClient,
+    subscriptionTypeOptions,
+    selectedSubscriptionPrice,
+    registrationFeeDue,
+    totalDue,
+    openActivityModal,
+    handleEdit,
+    handleActivitySubmit,
+    handleDelete,
+    openSubscriptionModal,
+    goToActivityDetails,
+    handleSubscriptionSubmit,
     toggleActivityStatus,
     pendingDeactivateActivity,
     deactivateImpact,
